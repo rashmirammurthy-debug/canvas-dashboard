@@ -193,6 +193,19 @@
             padding: 0;
             text-decoration: underline;
         }
+        @media print {{
+            body {{ background: #fff; color: #000; }}
+            .filters, .stats-bar, #pw-gate, .read-more-btn {{ display: none !important; }}
+            .assignment {{ background: #f9f9f9; border: 1px solid #ddd; color: #000; page-break-inside: avoid; }}
+            .assignment-title a {{ color: #000; }}
+            .badge {{ background: #eee !important; color: #000 !important; }}
+            .description {{ background: #f0f0f0; color: #333; }}
+            .desc-full {{ display: inline !important; }}
+            .desc-short {{ display: none !important; }}
+            .section-header {{ background: #ddd; color: #000; }}
+            .links-section {{ background: #f0f0f0; }}
+            .link-item a {{ color: #000; }}
+        }}
 
         .links-section {
             margin-top: 14px;
@@ -309,6 +322,7 @@
             <button class="filter-btn type-filter" onclick="filterType('event')">📅 Events</button>
             <button class="filter-btn type-filter" onclick="filterType('due')">⏰ With Due Date</button>
             <button class="filter-btn type-filter" onclick="filterType('nodue')">📋 No Due Date</button>
+            <button class="filter-btn" onclick="window.print()" style="margin-left:auto;">🖨️ Print</button>
         </div>
 
         <div class="stats-bar">
@@ -1640,7 +1654,7 @@
 
         </div>
 
-        <p class="last-updated">Last updated: September 13, 2026 at 05:06 PM</p>
+        <p class="last-updated">Last updated: September 13, 2026 at 05:13 PM</p>
     </div>
 
     <script>
