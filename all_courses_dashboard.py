@@ -37,6 +37,17 @@ except ImportError:
     print("=" * 60)
     sys.exit(1)
 
+def _clean(value):
+    """Secrets pasted into GitHub often keep the quotes or spaces they had in config.py."""
+    return value.strip().strip("\"'").strip() if isinstance(value, str) else value
+
+CANVAS_URL = _clean(CANVAS_URL).rstrip("/")
+if not CANVAS_URL.startswith(("http://", "https://")):
+    CANVAS_URL = "https://" + CANVAS_URL
+API_TOKEN = _clean(API_TOKEN)
+DASHBOARD_URL = _clean(DASHBOARD_URL)
+DASHBOARD_PASSWORD = _clean(DASHBOARD_PASSWORD)
+
 headers = {
     "Authorization": f"Bearer {API_TOKEN}"
 }
