@@ -1,6 +1,12 @@
 {
   "title": "Projects",
   "subtitle": "Things I've built with Claude as a coding partner. This page refreshes itself every week.",
+  "glossary": [
+    {
+      "term": "LLM workflow",
+      "definition": "A pipeline where ordinary code controls every step (fetching, filtering, formatting, sending) and calls a large language model only for specific jobs such as ranking, summarizing or extracting dates. The model doesn't choose what happens next or use tools on its own, which keeps the result predictable and inexpensive. It differs from an agent, where the model itself directs the steps."
+    }
+  ],
   "projects": [
     {
       "id": "daily-reads",
@@ -8,7 +14,7 @@
       "tagline": "A curated daily email of things worth reading.",
       "description": "Collects articles from RSS feeds, a personal source list and newsletters in Gmail. Claude picks the best five and writes a short blurb for each. The email also adds the day's weather, reminders of upcoming dates found in the inbox, and one-click calendar buttons.",
       "runs": "GitHub Actions, every morning",
-      "tech": ["Python", "Claude API", "RSS", "Gmail IMAP/SMTP", "GitHub Actions"],
+      "tech": ["LLM workflow", "Python", "Claude API", "RSS", "Gmail IMAP/SMTP", "GitHub Actions"],
       "paths": ["daily_feed.py", "sources.txt", ".github/workflows/daily-feed.yml"]
     },
     {
@@ -17,7 +23,7 @@
       "tagline": "A daily digest of school emails, filtered to what applies.",
       "description": "Reads school emails from a Gmail label and has Claude keep only what applies to the family, sorted into things needing action, upcoming dates, and news. Adds links to sign-up forms and video meetings, plus one-click calendar buttons. It only sends when something is relevant.",
       "runs": "GitHub Actions, every morning",
-      "tech": ["Python", "Claude API", "Gmail IMAP/SMTP", "GitHub Actions"],
+      "tech": ["LLM workflow", "Python", "Claude API", "Gmail IMAP/SMTP", "GitHub Actions"],
       "paths": ["school_feed.py", ".github/workflows/school-feed.yml"]
     },
     {

@@ -117,6 +117,11 @@ h2 {{ font-size:1.25rem; margin:0; }}
 .recent {{ background:var(--note); border-radius:10px; padding:10px 12px; font-size:.92rem; margin-top:auto; }}
 .recent p {{ margin:4px 0 0; }}
 .updated {{ color:var(--muted); font-size:.8rem; margin:0; }}
+.terms {{ margin-top:32px; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:20px 22px; }}
+.terms h2 {{ font-size:1.05rem; margin:0 0 10px; }}
+.terms dt {{ font-weight:700; }}
+.terms dd {{ margin:4px 0 12px; color:var(--muted); }}
+.terms dd:last-child {{ margin-bottom:0; }}
 footer {{ margin-top:36px; color:var(--muted); font-size:.85rem; }}
 </style>
 </head>
@@ -127,6 +132,7 @@ footer {{ margin-top:36px; color:var(--muted); font-size:.85rem; }}
 <div class="grid">
 {cards}
 </div>
+{terms}
 <footer>Refreshed {refreshed} by a scheduled GitHub Actions workflow. The "Recently" notes are written by Claude from recent commit messages.</footer>
 </main>
 </body>
@@ -151,6 +157,14 @@ def render_card(project, info, activity):
     )
 
 
+def render_terms(glossary):
+    if not glossary:
+        return ""
+    e = html.escape
+    entries = "".join(f'<dt>{e(g["term"])}</dt><dd>{e(g["definition"])}</dd>' for g in glossary)
+    return f'<section class="terms"><h2>Terms</h2><dl>{entries}</dl></section>'
+
+
 if __name__ == "__main__":
     with open(os.path.join(ROOT, "projects.json"), encoding="utf-8") as f:
         config = json.load(f)
@@ -162,7 +176,7 @@ if __name__ == "__main__":
     cards = "\n".join(render_card(p, infos[p["id"]], activity.get(p["id"], "")) for p in projects)
     page = PAGE.format(
         title=html.escape(config["title"]), subtitle=html.escape(config["subtitle"]),
-        cards=cards, refreshed=f"{df.local_now():%B %d, %Y}",
+        cards=cards, terms=render_terms(config.get("glossary", [])), refreshed=f"{df.local_now():%B %d, %Y}",
     )
     with open(os.path.join(ROOT, "projects.html"), "w", encoding="utf-8") as f:
         f.write(page)
