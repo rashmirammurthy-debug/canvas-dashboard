@@ -34,6 +34,8 @@ BLURB_INPUT_CHARS = 2500
 REMINDER_DAYS = 4
 REMINDER_LOOKBACK_DAYS = 7
 REMINDER_MAX_EMAILS = 60
+# Order of sections in the email; the last one is also the lowest priority when picking
+CATEGORY_ORDER = [MY_SOURCES, "Tech / AI", "Business / career", "General reads", "Data / analytics"]
 SEEN_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "seen.json")
 SEEN_LIMIT = 500
 
@@ -81,13 +83,24 @@ WEATHER_CODES = {
 
 
 def load_my_sources():
-    """Read feed URLs from sources.txt (one per line, '#' starts a comment)."""
+    """Read feed URLs from sources.txt. Returns (urls, priority_urls).
+
+    One URL per line; '#' starts a comment. Add '# priority' after a URL to make sure the
+    daily email includes an item from it whenever it has something new.
+    """
     path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sources.txt")
     if not os.path.exists(path):
-        return []
+        return [], set()
+    urls, priority = [], set()
     with open(path, encoding="utf-8") as f:
-        lines = (line.split("#", 1)[0].strip() for line in f)
-        return [line for line in lines if line]
+        for line in f:
+            url, _, comment = line.partition("#")
+            url = url.strip()
+            if url:
+                urls.append(url)
+                if "priority" in comment.lower():
+                    priority.add(url)
+    return urls, priority
 
 
 def link_key(link):
@@ -220,7 +233,8 @@ def fetch_newsletters():
 
 def fetch_items(seen):
     now = datetime.now(timezone.utc)
-    feeds = {**FEEDS, MY_SOURCES: load_my_sources()}
+    my_urls, priority_urls = load_my_sources()
+    feeds = {**FEEDS, MY_SOURCES: my_urls}
     items = []
     for category, urls in feeds.items():
         # Personal blogs post less often, so look back further for them
@@ -253,6 +267,7 @@ def fetch_items(seen):
                     "title": entry.get("title", "").strip(),
                     "link": entry.get("link", ""),
                     "body": strip_html(raw)[:BODY_CHARS],
+                    "priority": url in priority_urls,
                 })
     items += fetch_newsletters()
     items = [i for i in items if link_key(i["link"]) not in seen]
@@ -261,7 +276,28 @@ def fetch_items(seen):
     return items
 
 
+def ensure_priority(chosen, items):
+    """Guarantee one item from a '# priority' source, dropping the least important pick if full."""
+    if any(i.get("priority") for i in chosen):
+        return chosen
+    candidates = [i for i in items if i.get("priority")]
+    if not candidates:
+        return chosen
+    best = max(candidates, key=lambda i: len(i["body"]))  # the one with the most real text
+    best["reason"] = best.get("reason") or "From a source you marked as priority."
+    if len(chosen) >= NUM_ITEMS:
+        drop = next((i for i in reversed(chosen) if i["category"] == CATEGORY_ORDER[-1]), chosen[-1])
+        chosen = [i for i in chosen if i is not drop]
+    return chosen + [best]
+
+
 def pick_items(items):
+    chosen = ensure_priority(choose_items(items), items)
+    rank = {c: n for n, c in enumerate(CATEGORY_ORDER)}
+    return sorted(chosen, key=lambda i: rank.get(i["category"], len(CATEGORY_ORDER) - 1))
+
+
+def choose_items(items):
     """Ask Claude to choose NUM_ITEMS; sets item['reason'] and returns the chosen items."""
     for i in items:
         i["reason"] = ""
@@ -269,7 +305,8 @@ def pick_items(items):
         return items
 
     listing = "\n".join(
-        f"[{i['id']}] ({i['category']}) {i['title']} - {i['source']}\n    {i['body'][:200]}"
+        f"[{i['id']}] ({i['category']}{', PRIORITY' if i.get('priority') else ''}) "
+        f"{i['title']} - {i['source']}\n    {i['body'][:200]}"
         for i in items
     )
     prompt = (
@@ -279,6 +316,9 @@ def pick_items(items):
         f'Items in the "{MY_SOURCES}" category come from sources the reader chose themselves, '
         "so include the best 2-3 of them whenever that many are listed, spread across different "
         "sources rather than several from one. Prefer a piece with real text over a bare headline. "
+        "Items marked PRIORITY come from sources the reader especially values, so include the best one "
+        "whenever any is listed. Treat the \"Data / analytics\" category as lowest priority: include at "
+        "most one, and only if it is clearly better than the alternatives. "
         'Reply with only JSON: [{"id": <int>, "reason": "<one sentence on why it is worth reading>"}].\n\n'
         + listing
     )

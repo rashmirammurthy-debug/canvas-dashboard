@@ -2,6 +2,6 @@
 # Lines starting with # are ignored. Example:
 # https://www.oneusefulthing.org/feed
 https://www.lennysnewsletter.com/feed
-https://stratechery.com/feed/
+https://stratechery.com/feed/  # priority
 https://tldr.tech/api/rss/ai
 https://dataneighbor.substack.com/feed
