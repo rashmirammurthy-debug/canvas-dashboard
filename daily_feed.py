@@ -24,7 +24,7 @@ import anthropic
 import feedparser
 
 MODEL = "claude-sonnet-5"
-MAX_TOKENS = 8000
+MAX_TOKENS = 32000
 NUM_ITEMS = 5
 LOOKBACK_HOURS = 30
 MAX_PER_FEED = 8
@@ -150,15 +150,21 @@ def decode(value):
     return str(make_header(decode_header(value or "")))
 
 
-def ask_json(prompt):
+def ask_json(prompt, effort="medium"):
     """Send a prompt to Claude and parse the JSON list it replies with.
 
     Claude Sonnet 5 thinks by default, so the reply can start with a thinking block: read only the
-    text blocks. Thinking tokens count toward max_tokens, so the ceiling is generous.
+    text blocks. Thinking tokens count toward max_tokens, so the ceiling is high and the request is
+    streamed (the SDK's recommended way to run long requests). effort ('low'/'medium'/'high') caps
+    how much the model reasons; simple picking and summarizing need less than date/grade logic.
     """
-    resp = anthropic.Anthropic().messages.create(
-        model=MODEL, max_tokens=MAX_TOKENS, messages=[{"role": "user", "content": prompt}]
-    )
+    with anthropic.Anthropic().messages.stream(
+        model=MODEL,
+        max_tokens=MAX_TOKENS,
+        output_config={"effort": effort},
+        messages=[{"role": "user", "content": prompt}],
+    ) as stream:
+        resp = stream.get_final_message()
     if resp.stop_reason == "max_tokens":
         raise ValueError("Claude's reply was cut off (max_tokens)")
     text = "".join(block.text for block in resp.content if block.type == "text")
@@ -350,7 +356,7 @@ def choose_items(items):
     try:
         by_id = {i["id"]: i for i in items}
         chosen = []
-        for p in ask_json(prompt):
+        for p in ask_json(prompt, effort="low"):
             if p["id"] in by_id:
                 by_id[p["id"]]["reason"] = p.get("reason", "")
                 chosen.append(by_id[p["id"]])
@@ -400,7 +406,7 @@ def add_blurbs(picks):
         'Reply with only JSON: [{"id": <int>, "blurb": "<blurb>"}].\n\n' + listing
     )
     try:
-        blurbs = {b["id"]: b.get("blurb", "") for b in ask_json(prompt)}
+        blurbs = {b["id"]: b.get("blurb", "") for b in ask_json(prompt, effort="low")}
     except Exception as e:
         print(f"Claude blurbs failed, using excerpts: {e}", file=sys.stderr)
         blurbs = {}
