@@ -8,6 +8,11 @@ on:
 permissions:
   contents: write            # needed to commit seen.json
 
+# Several workflows commit to this repo; run them one at a time so pushes don't collide
+concurrency:
+  group: repo-writes
+  cancel-in-progress: false
+
 jobs:
   send:
     runs-on: ubuntu-latest

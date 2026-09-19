@@ -12,6 +12,14 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
+
+# Timezone for dates shown to you. GitHub's machines run on UTC, so this is set explicitly
+# instead of relying on the computer's own clock.
+try:
+    LOCAL_TZ = ZoneInfo(os.environ.get("TIMEZONE", "America/New_York"))
+except Exception:  # e.g. Windows without the tzdata package: fall back to this PC's timezone
+    LOCAL_TZ = None
 
 # ============================================================
 # Load your Canvas credentials from config file
@@ -58,9 +66,18 @@ def extract_links(html):
     """Extract all links from HTML content"""
     if not html:
         return []
-    pattern = r'<a[^>]*href=["\']([^"\']+)["\'][^>]*>([^<]*)</a>'
+    pattern = r'<a[^>]*href=["\']([^"\']+)["\'][^>]*>([\s\S]*?)</a>'
     matches = re.findall(pattern, html, re.IGNORECASE | re.DOTALL)
-    return [{"url": url.strip(), "text": text.strip() or "Link"} for url, text in matches]
+    results = []
+    for url, raw_text in matches:
+        # Strip any inner HTML tags to get plain text
+        text = re.sub(r'<[^>]+>', '', raw_text).strip()
+        # Try to get filename from title or href if text is empty
+        if not text:
+            title_match = re.search(r'title=["\']([^"\']+)["\']', url)
+            text = title_match.group(1) if title_match else url.split('/')[-1].split('?')[0] or "Link"
+        results.append({"url": url.strip(), "text": text or "Link"})
+    return results
 
 def html_to_text(html):
     """Convert HTML to plain text"""
@@ -440,6 +457,28 @@ html_content = '''<!DOCTYPE html>
             line-height: 1.5;
             font-size: 0.95em;
         }
+        .read-more-btn {
+            background: none;
+            border: none;
+            color: #00d9ff;
+            cursor: pointer;
+            font-size: 0.9em;
+            padding: 0;
+            text-decoration: underline;
+        }
+        @media print {{
+            body {{ background: #fff; color: #000; }}
+            .filters, .stats-bar, #pw-gate, .read-more-btn {{ display: none !important; }}
+            .assignment {{ background: #f9f9f9; border: 1px solid #ddd; color: #000; page-break-inside: avoid; }}
+            .assignment-title a {{ color: #000; }}
+            .badge {{ background: #eee !important; color: #000 !important; }}
+            .description {{ background: #f0f0f0; color: #333; }}
+            .desc-full {{ display: inline !important; }}
+            .desc-short {{ display: none !important; }}
+            .section-header {{ background: #ddd; color: #000; }}
+            .links-section {{ background: #f0f0f0; }}
+            .link-item a {{ color: #000; }}
+        }}
 
         .links-section {
             margin-top: 14px;
@@ -524,6 +563,7 @@ html_content += '''        </div>
             <button class="filter-btn type-filter" onclick="filterType('event')">📅 Events</button>
             <button class="filter-btn type-filter" onclick="filterType('due')">⏰ With Due Date</button>
             <button class="filter-btn type-filter" onclick="filterType('nodue')">📋 No Due Date</button>
+            <button class="filter-btn" onclick="window.print()" style="margin-left:auto;">🖨️ Print</button>
         </div>
 
         <div class="stats-bar">
@@ -644,10 +684,16 @@ else:
 
         if description_text:
             safe_desc = description_text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('\n', '<br>')
-            # Truncate long descriptions
             if len(safe_desc) > 300:
-                safe_desc = safe_desc[:300] + "..."
-            html_content += f'''
+                short = safe_desc[:300]
+                html_content += f'''
+            <div class="description">
+                <span class="desc-short">{short}... <button class="read-more-btn" onclick="toggleDesc(this)">Read more</button></span>
+                <span class="desc-full" style="display:none">{safe_desc} <button class="read-more-btn" onclick="toggleDesc(this)">Read less</button></span>
+            </div>
+'''
+            else:
+                html_content += f'''
             <div class="description">{safe_desc}</div>
 '''
 
@@ -714,8 +760,15 @@ else:
             if description_text:
                 safe_desc = description_text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('\n', '<br>')
                 if len(safe_desc) > 300:
-                    safe_desc = safe_desc[:300] + "..."
-                html_content += f'''
+                    short = safe_desc[:300]
+                    html_content += f'''
+            <div class="description">
+                <span class="desc-short">{short}... <button class="read-more-btn" onclick="toggleDesc(this)">Read more</button></span>
+                <span class="desc-full" style="display:none">{safe_desc} <button class="read-more-btn" onclick="toggleDesc(this)">Read less</button></span>
+            </div>
+'''
+                else:
+                    html_content += f'''
             <div class="description">{safe_desc}</div>
 '''
 
@@ -747,13 +800,20 @@ else:
 html_content += f'''
         </div>
 
-        <p class="last-updated">Last updated: {datetime.now().strftime("%B %d, %Y at %I:%M %p")}</p>
+        <p class="last-updated">Last updated: {datetime.now(LOCAL_TZ).strftime("%B %d, %Y at %I:%M %p")}</p>
     </div>
 
     <script>
         // Track current filters
         let currentCourse = 'all';
         let currentType = 'all';
+
+        function toggleDesc(btn) {{
+            const short = btn.closest('.description').querySelector('.desc-short');
+            const full = btn.closest('.description').querySelector('.desc-full');
+            short.style.display = short.style.display === 'none' ? '' : 'none';
+            full.style.display = full.style.display === 'none' ? '' : 'none';
+        }}
 
         function filterCourse(courseId) {{
             currentCourse = courseId;
@@ -862,18 +922,23 @@ with open(output_path, "w", encoding="utf-8") as f:
     f.write(html_content)
 
 print(f"\n✅ Dashboard saved to: {output_path}")
-print("Opening in browser...")
-
-webbrowser.open(f"file://{output_path}")
+if not os.environ.get("GITHUB_ACTIONS"):  # no browser on GitHub's machines
+    print("Opening in browser...")
+    webbrowser.open(f"file://{output_path}")
 
 # Auto-push to GitHub Pages
 import subprocess
 script_dir = os.path.dirname(os.path.abspath(__file__))
 print("\nPushing to GitHub...")
 subprocess.run(["git", "add", "my_dashboard.html"], cwd=script_dir)
-subprocess.run(["git", "commit", "-m", "update dashboard"], cwd=script_dir)
-subprocess.run(["git", "push"], cwd=script_dir)
-print("✅ Dashboard pushed to GitHub Pages")
+subprocess.run(["git", "commit", "-m", "update dashboard"], cwd=script_dir)  # exits 1 if nothing changed: fine
+# Other workflows also commit to this repo, so sync first or the push can be rejected
+subprocess.run(["git", "pull", "--rebase", "--autostash"], cwd=script_dir)
+push = subprocess.run(["git", "push"], cwd=script_dir)
+if push.returncode == 0:
+    print("✅ Dashboard pushed to GitHub Pages")
+else:
+    print("⚠️  Push to GitHub failed; the dashboard was NOT published")
 
 # ============================================================
 # Send daily email digest
@@ -889,7 +954,7 @@ def send_email_digest(assignments_with_due, assignments_no_due):
         return "#27ae60"
 
     def fmt_date(a):
-        return a["due_date"].astimezone().strftime("%a %b %d")
+        return a["due_date"].astimezone(LOCAL_TZ).strftime("%a %b %d")
 
     rows_upcoming = ""
     for a in upcoming:
@@ -934,7 +999,7 @@ def send_email_digest(assignments_with_due, assignments_no_due):
 <body style="margin:0;padding:0;background:#0f0f1a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#fff;">
   <div style="max-width:560px;margin:0 auto;padding:24px 16px;">
     <h2 style="color:#00d9ff;margin:0 0 4px;">📚 Canvas Digest</h2>
-    <p style="color:#aaa;margin:0 0 20px;font-size:14px;">{datetime.now().strftime("%A, %B %d")}</p>
+    <p style="color:#aaa;margin:0 0 20px;font-size:14px;">{datetime.now(LOCAL_TZ).strftime("%A, %B %d")}</p>
 
     <h3 style="color:#fff;margin:0 0 8px;">Upcoming</h3>
     {no_upcoming_msg}
@@ -955,8 +1020,8 @@ def send_email_digest(assignments_with_due, assignments_no_due):
 </html>"""
 
     msg = MIMEMultipart("alternative")
-    msg["Subject"] = f"📚 Canvas: {len(upcoming)} upcoming assignment{'s' if len(upcoming) != 1 else ''} — {datetime.now().strftime('%b %d')}"
-    recipients = EMAIL_TO if isinstance(EMAIL_TO, list) else [EMAIL_TO]
+    msg["Subject"] = f"📚 Canvas: {len(upcoming)} upcoming assignment{'s' if len(upcoming) != 1 else ''} — {datetime.now(LOCAL_TZ).strftime('%b %d')}"
+    recipients = EMAIL_TO if isinstance(EMAIL_TO, list) else [r.strip() for r in EMAIL_TO.split(",") if r.strip()]
     msg["From"] = EMAIL_FROM
     msg["To"]   = ", ".join(recipients)
     msg.attach(MIMEText(body, "html"))

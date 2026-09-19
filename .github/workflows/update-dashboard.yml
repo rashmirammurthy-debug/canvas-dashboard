@@ -1,0 +1,66 @@
+name: Update Dashboard
+
+on:
+  schedule:
+    # UTC. In summer (EDT) these are 8 AM and 5 PM Eastern; in winter (EST) 7 AM and 4 PM.
+    - cron: '0 12 * * 1-5'
+    - cron: '0 21 * * 1-5'
+  workflow_dispatch:           # lets you trigger it manually from GitHub
+
+permissions:
+  contents: write              # needed to push my_dashboard.html
+
+# Several workflows commit to this repo; run them one at a time so pushes don't collide
+concurrency:
+  group: repo-writes
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Create config.py from secrets
+        env:
+          CANVAS_URL: ${{ secrets.CANVAS_URL }}
+          API_TOKEN: ${{ secrets.API_TOKEN }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+          EMAIL_APP_PASSWORD: ${{ secrets.EMAIL_APP_PASSWORD }}
+          DASHBOARD_URL: ${{ secrets.DASHBOARD_URL }}
+          DASHBOARD_PASSWORD: ${{ secrets.DASHBOARD_PASSWORD }}
+        run: |
+          python - << 'EOF'
+          import os
+          with open('config.py', 'w') as f:
+              f.write(f"""
+          CANVAS_URL = {repr(os.environ['CANVAS_URL'])}
+          API_TOKEN = {repr(os.environ['API_TOKEN'])}
+          EMAIL_FROM = {repr(os.environ['EMAIL_FROM'])}
+          EMAIL_TO = {repr(os.environ['EMAIL_TO'])}
+          EMAIL_APP_PASSWORD = {repr(os.environ['EMAIL_APP_PASSWORD'])}
+          DASHBOARD_URL = {repr(os.environ['DASHBOARD_URL'])}
+          DASHBOARD_PASSWORD = {repr(os.environ['DASHBOARD_PASSWORD'])}
+          """)
+          EOF
+
+      - name: Configure git
+        run: |
+          git config user.email "rashmi.rammurthy@gmail.com"
+          git config user.name "rashmirammurthy-debug"
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/rashmirammurthy-debug/canvas-dashboard.git
+
+      - name: Run dashboard script
+        env:
+          TIMEZONE: America/New_York
+        run: python all_courses_dashboard.py
