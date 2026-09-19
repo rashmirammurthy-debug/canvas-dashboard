@@ -28,7 +28,7 @@ What struck me wasn't just the speed. It was that I could reason about the code.
 - A live dashboard at a GitHub Pages URL, updated every day
 - Password protection so I can share the link with family
 - A daily 6 PM email with every upcoming assignment, a "View Dashboard" button, and the password included
-- The whole thing runs automatically on my son's computer — I never have to touch it
+- The whole thing runs automatically in the cloud on GitHub — no computer has to be on, and I never have to touch it
 
 ## What this means
 

@@ -7,7 +7,7 @@
 >
 > The tool pulls live assignment data from Canvas, generates a color-coded HTML dashboard hosted on GitHub Pages, and emails a daily digest to the family every evening at 6 PM. It includes password protection, clickable links to every assignment, and urgency indicators (due today / this week / coming up).
 >
-> **Stack:** Python · Canvas REST API · GitHub Pages · Gmail SMTP · Windows Task Scheduler
+> **Stack:** Python · Canvas REST API · GitHub Pages · Gmail SMTP · GitHub Actions
 
 **Skills to tag:** Python · API Integration · Data Automation · GitHub · AI-Assisted Development
 
