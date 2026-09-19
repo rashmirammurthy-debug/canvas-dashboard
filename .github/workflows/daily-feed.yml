@@ -29,6 +29,9 @@ jobs:
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
           EMAIL_APP_PASSWORD: ${{ secrets.EMAIL_APP_PASSWORD }}
           NEWSLETTER_LABEL: Newsletters
+          INBOX_REMINDERS: 'true'   # set to 'false' to stop sending inbox emails to Claude for reminders
+          WEATHER_CITY: ''          # e.g. 'Boston'; leave empty to skip the weather line
+          TIMEZONE: America/New_York
         run: python daily_feed.py
 
       - name: Save what was sent
