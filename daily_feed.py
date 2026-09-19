@@ -34,6 +34,9 @@ BLURB_INPUT_CHARS = 2500
 REMINDER_DAYS = 4
 REMINDER_LOOKBACK_DAYS = 7
 REMINDER_MAX_EMAILS = 60
+# Some feeds link to a host that 404s; rewrite to the real site (HBR's feed uses feeds.hbr.org)
+LINK_REWRITES = [(re.compile(r"^https?://feeds\.hbr\.org/"), "https://hbr.org/")]
+
 # Order of sections in the email; the last one is also the lowest priority when picking
 CATEGORY_ORDER = [MY_SOURCES, "Tech / AI", "Business / career", "General reads", "Data / analytics"]
 SEEN_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "seen.json")
@@ -129,6 +132,12 @@ def local_now():
         return datetime.now(ZoneInfo(os.environ.get("TIMEZONE", "America/New_York")))
     except Exception:
         return datetime.now().astimezone()
+
+
+def fix_link(link):
+    for pattern, replacement in LINK_REWRITES:
+        link = pattern.sub(replacement, link)
+    return link
 
 
 def strip_html(raw):
@@ -265,7 +274,7 @@ def fetch_items(seen):
                     "category": category,
                     "source": source,
                     "title": entry.get("title", "").strip(),
-                    "link": entry.get("link", ""),
+                    "link": fix_link(entry.get("link", "")),
                     "body": strip_html(raw)[:BODY_CHARS],
                     "priority": url in priority_urls,
                 })
