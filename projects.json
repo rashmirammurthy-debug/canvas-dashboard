@@ -1,6 +1,30 @@
 {
   "title": "Projects",
-  "subtitle": "Things I've built with Claude as a coding partner. This page refreshes itself every week.",
+  "headline": "Practical AI automations, built with Claude",
+  "lead": "I'm a data analyst, not a developer. These projects turn everyday information overload into short, useful emails and pages that run on their own.",
+  "subtitle": "Practical AI automations built with Claude as a coding partner. This page refreshes itself every week.",
+  "principles": [
+    {
+      "icon": "🧭",
+      "title": "Code in charge",
+      "text": "Ordinary code controls every step. The model is called only for specific jobs, like ranking, summarizing and extracting dates."
+    },
+    {
+      "icon": "☁️",
+      "title": "Runs itself",
+      "text": "Everything runs on a schedule in the cloud. There's no server to maintain and no computer that has to stay on."
+    },
+    {
+      "icon": "🔍",
+      "title": "Trust, but verify",
+      "text": "Model output is checked before it's used. For example, links come from the original email, not from the model."
+    },
+    {
+      "icon": "🔒",
+      "title": "Private by design",
+      "text": "Credentials live in encrypted secrets, and personal details are kept out of the code and off this page."
+    }
+  ],
   "glossary": [
     {
       "term": "LLM workflow",
@@ -11,8 +35,17 @@
     {
       "id": "daily-reads",
       "name": "Daily Reads",
+      "icon": "📰",
+      "accent": "#1a4fd6",
       "tagline": "A curated daily email of things worth reading.",
-      "description": "Collects articles from RSS feeds, a personal source list and newsletters in Gmail. Claude picks the best five and writes a short blurb for each. The email also adds the day's weather, reminders of upcoming dates found in the inbox, and one-click calendar buttons.",
+      "problem": "Good reading gets buried across feeds, newsletters and an overflowing inbox.",
+      "approach": "Every morning a scheduled job gathers articles from RSS feeds, a personal source list and newsletters in Gmail. Claude ranks them and writes a short blurb for each of the best five. Ordinary code then adds the weather, upcoming dates found in the inbox, and one-click calendar buttons.",
+      "outcome": "One short email instead of checking many sources, with a reminder of what's coming up.",
+      "flow": [
+        {"label": "RSS + newsletters", "kind": "code"},
+        {"label": "Ranks and summarizes", "kind": "llm"},
+        {"label": "Email digest", "kind": "code"}
+      ],
       "runs": "GitHub Actions, every morning",
       "tech": ["LLM workflow", "Python", "Claude API", "RSS", "Gmail IMAP/SMTP", "GitHub Actions"],
       "paths": ["daily_feed.py", "sources.txt", ".github/workflows/daily-feed.yml"]
@@ -20,8 +53,17 @@
     {
       "id": "school-update",
       "name": "School Update",
+      "icon": "🎒",
+      "accent": "#0b6b4f",
       "tagline": "A daily digest of school emails, filtered to what applies.",
-      "description": "Reads school emails from a Gmail label and has Claude keep only what applies to the family, sorted into things needing action, upcoming dates, and news. Adds links to sign-up forms and video meetings, plus one-click calendar buttons. It only sends when something is relevant.",
+      "problem": "Important notices are buried in long school newsletters, and dates are easy to miss.",
+      "approach": "Claude reads the emails in a Gmail label, keeps only what applies to the family, and sorts it into needs-action, coming-up and news, pulling out dates, times and links. Ordinary code turns each date into a one-click calendar event and sends only when something is relevant.",
+      "outcome": "A brief, action-first email with the right links and calendar buttons, and nothing at all on quiet days.",
+      "flow": [
+        {"label": "School emails in Gmail", "kind": "code"},
+        {"label": "Filters and extracts", "kind": "llm"},
+        {"label": "Email + calendar links", "kind": "code"}
+      ],
       "runs": "GitHub Actions, every morning",
       "tech": ["LLM workflow", "Python", "Claude API", "Gmail IMAP/SMTP", "GitHub Actions"],
       "paths": ["school_feed.py", ".github/workflows/school-feed.yml"]
@@ -29,8 +71,17 @@
     {
       "id": "assignment-dashboard",
       "name": "Assignment Dashboard",
+      "icon": "📚",
+      "accent": "#7c3aed",
       "tagline": "Every assignment across all courses, in one color-coded page.",
-      "description": "Pulls assignments and calendar events from the Canvas learning platform API, builds a filterable, color-coded page with urgency indicators, publishes it to GitHub Pages behind a password, and emails an evening digest.",
+      "problem": "Assignments and events are spread across many courses, so it's hard to see what's due next.",
+      "approach": "A Python script reads the Canvas learning platform API, ranks work by urgency, builds a filterable color-coded page, publishes it behind a password on GitHub Pages, and sends an evening digest.",
+      "outcome": "One page and one email that show everything due, running unattended in the cloud.",
+      "flow": [
+        {"label": "Canvas API", "kind": "code"},
+        {"label": "Python page builder", "kind": "code"},
+        {"label": "GitHub Pages + email", "kind": "code"}
+      ],
       "runs": "GitHub Actions, every evening",
       "tech": ["Python", "Canvas REST API", "GitHub Pages", "GitHub Actions", "Gmail SMTP"],
       "paths": ["all_courses_dashboard.py", ".github/workflows/update-dashboard.yml", "README.md", "config_template.py"]
@@ -38,8 +89,16 @@
     {
       "id": "analytics-debugger",
       "name": "Analytics Debugger",
+      "icon": "🔎",
+      "accent": "#d97706",
       "tagline": "A DevTools panel that makes web-analytics requests readable.",
-      "description": "A Chrome extension that captures analytics upload requests as a page loads and shows them in a readable panel inside the browser's developer tools, so they can be inspected without digging through raw network logs.",
+      "problem": "Analytics tracking requests are hard to read in raw network logs.",
+      "approach": "A Chrome extension captures the requests as a page loads and lays them out in a readable panel inside the browser's developer tools.",
+      "outcome": "Faster checking that analytics tracking is firing correctly.",
+      "flow": [
+        {"label": "Browser requests", "kind": "code"},
+        {"label": "Readable DevTools panel", "kind": "code"}
+      ],
       "runs": "Runs in the browser while debugging",
       "tech": ["JavaScript", "Chrome Extension (Manifest V3)", "DevTools API"],
       "status": "Maintained"
@@ -47,8 +106,12 @@
     {
       "id": "writing",
       "name": "Writing",
+      "icon": "✍️",
+      "accent": "#db2777",
       "tagline": "Notes on building with AI as a non-developer.",
-      "description": "A LinkedIn project entry and a Medium article about going from an idea to a working, automated app with Claude as a coding partner, written from the point of view of a data analyst rather than a software developer.",
+      "problem": "Many people who understand data assume that building software isn't for them.",
+      "approach": "Sharing the process: a LinkedIn entry and a Medium article about going from an idea to a working, automated app with Claude as a coding partner.",
+      "outcome": "Practical notes for other analysts who want to build.",
       "runs": "Drafts",
       "tech": ["Markdown"],
       "paths": ["writing/"]
