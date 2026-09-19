@@ -54,7 +54,7 @@ def find_school_items(now, rules):
         '"when": "Tue Sep 22, or empty", "what": "<one clear sentence>", '
         '"note": "<optional, e.g. grade it applies to>"}], or [] if nothing applies.\n\n' + listing
     )
-    return df.ask_json(prompt, 2500)
+    return df.ask_json(prompt)
 
 
 def render(items, now):

@@ -24,6 +24,7 @@ import anthropic
 import feedparser
 
 MODEL = "claude-sonnet-5"
+MAX_TOKENS = 8000
 NUM_ITEMS = 5
 LOOKBACK_HOURS = 30
 MAX_PER_FEED = 8
@@ -149,12 +150,18 @@ def decode(value):
     return str(make_header(decode_header(value or "")))
 
 
-def ask_json(prompt, max_tokens):
-    """Send a prompt to Claude and parse the JSON list it replies with."""
+def ask_json(prompt):
+    """Send a prompt to Claude and parse the JSON list it replies with.
+
+    Claude Sonnet 5 thinks by default, so the reply can start with a thinking block: read only the
+    text blocks. Thinking tokens count toward max_tokens, so the ceiling is generous.
+    """
     resp = anthropic.Anthropic().messages.create(
-        model=MODEL, max_tokens=max_tokens, messages=[{"role": "user", "content": prompt}]
+        model=MODEL, max_tokens=MAX_TOKENS, messages=[{"role": "user", "content": prompt}]
     )
-    text = resp.content[0].text
+    if resp.stop_reason == "max_tokens":
+        raise ValueError("Claude's reply was cut off (max_tokens)")
+    text = "".join(block.text for block in resp.content if block.type == "text")
     return json.loads(text[text.index("["): text.rindex("]") + 1])
 
 
@@ -334,11 +341,12 @@ def choose_items(items):
     try:
         by_id = {i["id"]: i for i in items}
         chosen = []
-        for p in ask_json(prompt, 1000):
+        for p in ask_json(prompt):
             if p["id"] in by_id:
                 by_id[p["id"]]["reason"] = p.get("reason", "")
                 chosen.append(by_id[p["id"]])
         if chosen:
+            print("Picks chosen by Claude")
             return chosen[:NUM_ITEMS]
     except Exception as e:
         print(f"Claude ranking failed, falling back: {e}", file=sys.stderr)
@@ -383,10 +391,12 @@ def add_blurbs(picks):
         'Reply with only JSON: [{"id": <int>, "blurb": "<blurb>"}].\n\n' + listing
     )
     try:
-        blurbs = {b["id"]: b.get("blurb", "") for b in ask_json(prompt, 1500)}
+        blurbs = {b["id"]: b.get("blurb", "") for b in ask_json(prompt)}
     except Exception as e:
         print(f"Claude blurbs failed, using excerpts: {e}", file=sys.stderr)
         blurbs = {}
+    if blurbs:
+        print("Blurbs written by Claude")
     for i in picks:
         i["blurb"] = blurbs.get(i["id"]) or i["body"][:200]
 
@@ -484,7 +494,7 @@ def find_reminders(now):
         '24-hour time, or empty if no time is stated", "what": "<short description>", '
         '"from": "<sender>"}], or [] if there is nothing.\n\n' + listing
     )
-    return ask_json(prompt, 1000)
+    return ask_json(prompt)
 
 
 def calendar_button(title, date, time_str="", details=""):
