@@ -3,6 +3,7 @@ to your kids' grades (rules come from the SCHOOL_RULES secret, so they aren't in
 and emails an action / coming-up / new digest. Sends nothing when there's nothing relevant."""
 import html
 import os
+import re
 import sys
 from datetime import timedelta
 
@@ -17,11 +18,31 @@ HORIZON_DAYS = 45    # schools announce events weeks ahead, so look well past th
 MAX_EMAILS = 40
 EMAIL_CHARS = 6000
 
+MAX_LINKS_PER_EMAIL = 25
+# Links that are never what a family needs (unsubscribe, preferences, social media, 'view in browser')
+SKIP_LINK = re.compile(
+    r"unsubscribe|preferences|privacy|view (this )?(email )?in (your )?browser|"
+    r"facebook\.com|instagram\.com|twitter\.com|x\.com|linkedin\.com|youtube\.com",
+    re.I,
+)
+
 SECTIONS = [
     ("action", "Needs action", "#b3261e", "#fdecea"),
     ("upcoming", f"Coming up (next {HORIZON_DAYS} days)", "#a35f00", "#fff8e1"),
     ("new", "New", "#0b6b4f", "#e6f4ea"),
 ]
+
+
+def useful_links(mail):
+    """Distinct labelled links from an email, skipping unsubscribe/social/etc."""
+    seen, links = set(), []
+    for link in mail.get("links", []):
+        label = link["text"].strip()
+        if not label or link["href"] in seen or SKIP_LINK.search(label) or SKIP_LINK.search(link["href"]):
+            continue
+        seen.add(link["href"])
+        links.append({"text": label[:70], "href": link["href"]})
+    return links[:MAX_LINKS_PER_EMAIL]
 
 
 def find_school_items(now, rules):
@@ -30,12 +51,19 @@ def find_school_items(now, rules):
     if not mails:
         return []
     new_cutoff = now - timedelta(hours=NEW_HOURS)
-    listing = "\n\n".join(
-        f"[{n}] {'NEW' if CATCHUP or m['sent'] >= new_cutoff else 'EARLIER'} | received "
-        f"{m['sent'].astimezone(now.tzinfo):%a %b %d} | from {m['source']} | {m['title']}\n"
-        f"{m['text'][:EMAIL_CHARS]}"
-        for n, m in enumerate(mails)
-    )
+    # Claude picks links by id ("2:1"); we map the id back to the real address, so it can't invent one
+    link_map, listing_parts = {}, []
+    for n, m in enumerate(mails):
+        links = useful_links(m)
+        for k, link in enumerate(links):
+            link_map[f"{n}:{k}"] = link["href"]
+        link_lines = ("\nLINKS: " + " ; ".join(f"[{n}:{k}] {l['text']}" for k, l in enumerate(links))) if links else ""
+        listing_parts.append(
+            f"[{n}] {'NEW' if CATCHUP or m['sent'] >= new_cutoff else 'EARLIER'} | received "
+            f"{m['sent'].astimezone(now.tzinfo):%a %b %d} | from {m['source']} | {m['title']}\n"
+            f"{m['text'][:EMAIL_CHARS]}{link_lines}"
+        )
+    listing = "\n\n".join(listing_parts)
     prompt = (
         f"Today is {now:%A, %B %d, %Y}. Below are recent school emails for one family. Build a digest "
         f"of only what applies to them.\n\nWHICH SCHOOLS AND GRADES APPLY:\n{rules}\n\n"
@@ -57,9 +85,14 @@ def find_school_items(now, rules):
         '"end_time": "HH:MM 24-hour: the end of a stated time range, or the start plus a stated duration '
         '(e.g. a 30-minute meeting), else empty", '
         '"when": "Tue Sep 22, or empty", "what": "<one clear sentence>", '
+        '"link": "<id of the one most useful link for this item from its email\'s LINKS list, e.g. 2:1 - '
+        'a Zoom, sign-up or form link - or empty>", '
         '"note": "<optional, e.g. grade it applies to>"}], or [] if nothing applies.\n\n' + listing
     )
-    return df.ask_json(prompt)
+    items = df.ask_json(prompt)
+    for item in items:  # only accept links that really came from an email
+        item["url"] = link_map.get(str(item.get("link", "")).strip(), "")
+    return items
 
 
 def render(items, now):
@@ -82,9 +115,15 @@ def render(items, now):
             + (
                 df.calendar_button(
                     f'{i.get("school", "")}: {i.get("what", "")}', i.get("date", ""), i.get("time", ""),
-                    i.get("note", ""), i.get("end_time", ""),
+                    i.get("note", "") + (f"\nLink: {i['url']}" if i.get("url") else ""), i.get("end_time", ""),
                 )
                 if kind != "new" else ""
+            )
+            + (
+                f' <a href="{e(i["url"])}" style="display:inline-block;margin-left:6px;padding:1px 8px;'
+                f'border:1px solid {color};border-radius:10px;font-size:12px;color:{color};'
+                'text-decoration:none">Link</a>'
+                if i.get("url") else ""
             )
             + f'<div style="color:#777;font-size:13px">{e(str(i.get("school", "")))}'
             + (f' · {e(str(i["note"]))}' if i.get("note") else "")

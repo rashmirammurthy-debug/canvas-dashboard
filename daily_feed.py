@@ -32,7 +32,7 @@ MY_SOURCES = "My sources"
 MY_SOURCES_LOOKBACK_HOURS = 96
 BODY_CHARS = 3000
 BLURB_INPUT_CHARS = 2500
-REMINDER_DAYS = 4
+REMINDER_DAYS = 7
 REMINDER_LOOKBACK_DAYS = 7
 REMINDER_MAX_EMAILS = 60
 # Some feeds link to a host that 404s; rewrite to the real site (HBR's feed uses feeds.hbr.org)
@@ -174,6 +174,14 @@ def newsletter_link(html_body, message_id):
     return "https://mail.google.com/mail/u/0/#search/rfc822msgid%3A" + quote(message_id.strip("<>"))
 
 
+def extract_links(html_body):
+    """Every http(s) link in an HTML email body, as {'text', 'href'}."""
+    return [
+        {"text": strip_html(text), "href": html.unescape(href)}
+        for href, text in re.findall(r'(?is)<a[^>]+href="(https?://[^"]+)"[^>]*>(.*?)</a>', html_body)
+    ]
+
+
 def parse_message(msg):
     """Pull the fields we need out of an email.message.Message."""
     sent = parsedate_to_datetime(msg["Date"])
@@ -196,6 +204,7 @@ def parse_message(msg):
         "title": decode(msg["Subject"]).strip(),
         "message_id": msg["Message-ID"] or "",
         "html": html_body,
+        "links": extract_links(html_body),
         "text": strip_html(html_body) if html_body else re.sub(r"\s+", " ", plain).strip(),
     }
 
