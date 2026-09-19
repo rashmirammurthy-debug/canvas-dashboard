@@ -277,7 +277,8 @@ def pick_items(items):
         "data/analytics, business/career and general long-form reads. Favor substance and originality "
         "over hype or news churn, and cover at least 3 different categories. "
         f'Items in the "{MY_SOURCES}" category come from sources the reader chose themselves, '
-        "so include the best 1-2 of them whenever any are listed. "
+        "so include the best 2-3 of them whenever that many are listed, spread across different "
+        "sources rather than several from one. Prefer a piece with real text over a bare headline. "
         'Reply with only JSON: [{"id": <int>, "reason": "<one sentence on why it is worth reading>"}].\n\n'
         + listing
     )
@@ -341,8 +342,22 @@ def add_blurbs(picks):
         i["blurb"] = blurbs.get(i["id"]) or i["body"][:200]
 
 
+def weather_emoji(code):
+    if code in (0, 1):
+        return "☀️"
+    if code == 2:
+        return "⛅"
+    if code in (45, 48):
+        return "🌫️"
+    if code in (71, 73, 75, 77, 85, 86):
+        return "❄️"
+    if code in (95, 96, 99):
+        return "⛈️"
+    return "🌧️" if code >= 51 else "☁️"
+
+
 def get_weather():
-    """Today's forecast for each place in WEATHER_CITIES via Open-Meteo (free, no API key).
+    """Today's forecast (list of dicts) for each place in WEATHER_CITIES via Open-Meteo (free, no API key).
 
     WEATHER_CITIES is 'City, Region; City, Region', e.g. 'Lexington, Massachusetts; Boston, Massachusetts'.
     The region narrows the match so 'Lexington' doesn't resolve to Lexington, Kentucky.
@@ -376,12 +391,16 @@ def get_weather():
         except Exception as e:
             print(f"Weather for '{name}' failed: {e}", file=sys.stderr)
             continue
-        text = WEATHER_CODES.get(daily["weather_code"][0], "Mixed conditions")
-        text += f", high {round(daily['temperature_2m_max'][0])}°{symbol} / low {round(daily['temperature_2m_min'][0])}°{symbol}"
-        rain = daily["precipitation_probability_max"][0]
-        if rain:
-            text += f", {rain}% chance of precipitation"
-        lines.append(f"{place['name']}: {text}")
+        code = daily["weather_code"][0]
+        lines.append({
+            "place": place["name"],
+            "emoji": weather_emoji(code),
+            "summary": WEATHER_CODES.get(code, "Mixed conditions"),
+            "high": round(daily["temperature_2m_max"][0]),
+            "low": round(daily["temperature_2m_min"][0]),
+            "rain": daily["precipitation_probability_max"][0],
+            "unit": symbol,
+        })
     return lines
 
 
@@ -428,11 +447,33 @@ def render_html(picks, now, weather, reminders):
     e = html.escape
     parts = [
         '<div style="font-family:Segoe UI,Arial,sans-serif;max-width:600px;margin:auto">'
-        '<h2 style="margin-bottom:4px">Your daily reads</h2>'
-        f'<div style="color:#888;margin-bottom:{"4px" if weather else "24px"}">{now:%A, %B %d, %Y}</div>'
+        '<div style="background:#1a4fd6;color:#ffffff;border-radius:12px;padding:22px 26px;margin:0 0 14px">'
+        '<div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#bcd0ff">Your daily reads</div>'
+        f'<div style="font-size:32px;font-weight:700;line-height:1.15;margin-top:6px">{now:%A}</div>'
+        f'<div style="font-size:18px;color:#dbe6ff;margin-top:2px">{now:%B %d, %Y}</div></div>'
     ]
     if weather:
-        parts.append(f'<div style="color:#888;margin-bottom:24px">{"<br>".join(e(w) for w in weather)}</div>')
+        width = 100 // len(weather)
+        cards = "".join(
+            f'<td width="{width}%" valign="top" style="padding:0 {"0" if n == len(weather) - 1 else "7px"} 0 '
+            f'{"0" if n == 0 else "7px"}">'
+            '<div style="background:#eaf1ff;border:1px solid #c9dbff;border-radius:12px;padding:14px 16px">'
+            f'<div style="font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;'
+            f'color:#1a4fd6">{e(w["place"])}</div>'
+            f'<div style="margin-top:6px;font-size:34px;font-weight:700;color:#0b2a6f;line-height:1">'
+            f'{w["emoji"]} {w["high"]}°<span style="font-size:16px;font-weight:600;color:#5b7bc0">'
+            f' / {w["low"]}°{w["unit"]}</span></div>'
+            f'<div style="margin-top:6px;font-size:15px;color:#0b2a6f">{e(w["summary"])}'
+            + (f' · <b>{w["rain"]}%</b> precip.' if w["rain"] else "")
+            + "</div></div></td>"
+            for n, w in enumerate(weather)
+        )
+        parts.append(
+            '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" '
+            f'style="margin:0 0 26px"><tr>{cards}</tr></table>'
+        )
+    else:
+        parts.append('<div style="margin:0 0 12px"></div>')
     if reminders:
         rows = "".join(
             f'<li style="margin:0 0 6px"><b>{e(str(r.get("when", "")))}</b> - {e(str(r.get("what", "")))}'
@@ -481,7 +522,7 @@ if __name__ == "__main__":
     add_blurbs(picks)
     weather = optional("Weather", get_weather)
     reminders = optional("Reminders", find_reminders, now)
-    print(f"Weather: {'; '.join(weather) if weather else 'none'}; reminders: {len(reminders or [])}")
+    print(f"Weather: {'; '.join(w['place'] for w in weather) if weather else 'none'}; reminders: {len(reminders or [])}")
     if not picks and not reminders:
         sys.exit("Nothing to send.")
     body = render_html(picks, now, weather, reminders or [])
