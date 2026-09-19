@@ -1,0 +1,45 @@
+name: Projects Page
+
+on:
+  schedule:
+    - cron: '0 13 * * 0'   # Sundays, 13:00 UTC = 9 AM Eastern in summer (8 AM in winter)
+  workflow_dispatch:         # lets you trigger it manually from GitHub
+
+permissions:
+  contents: write            # needed to commit projects.html
+
+# Several workflows commit to this repo; run them one at a time so pushes don't collide
+concurrency:
+  group: repo-writes
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0     # the page reads recent git history
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install feedparser anthropic
+
+      - name: Build projects page
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          REDACT_TERMS: ${{ secrets.REDACT_TERMS }}   # optional: words that must never appear on the page
+          TIMEZONE: America/New_York
+        run: python projects_page.py
+
+      - name: Publish
+        run: |
+          git config user.email "rashmi.rammurthy@gmail.com"
+          git config user.name "rashmirammurthy-debug"
+          git add projects.html
+          git diff --staged --quiet || (git commit -m "update projects page" && git pull --rebase && git push)

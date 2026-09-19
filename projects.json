@@ -1,0 +1,51 @@
+{
+  "title": "Projects",
+  "subtitle": "Things I've built with Claude as a coding partner. This page refreshes itself every week.",
+  "projects": [
+    {
+      "id": "daily-reads",
+      "name": "Daily Reads",
+      "tagline": "A curated daily email of things worth reading.",
+      "description": "Collects articles from RSS feeds, a personal source list and newsletters in Gmail. Claude picks the best five and writes a short blurb for each. The email also adds the day's weather, reminders of upcoming dates found in the inbox, and one-click calendar buttons.",
+      "runs": "GitHub Actions, every morning",
+      "tech": ["Python", "Claude API", "RSS", "Gmail IMAP/SMTP", "GitHub Actions"],
+      "paths": ["daily_feed.py", "sources.txt", ".github/workflows/daily-feed.yml"]
+    },
+    {
+      "id": "school-update",
+      "name": "School Update",
+      "tagline": "A daily digest of school emails, filtered to what applies.",
+      "description": "Reads school emails from a Gmail label and has Claude keep only what applies to the family, sorted into things needing action, upcoming dates, and news. Adds links to sign-up forms and video meetings, plus one-click calendar buttons. It only sends when something is relevant.",
+      "runs": "GitHub Actions, every morning",
+      "tech": ["Python", "Claude API", "Gmail IMAP/SMTP", "GitHub Actions"],
+      "paths": ["school_feed.py", ".github/workflows/school-feed.yml"]
+    },
+    {
+      "id": "assignment-dashboard",
+      "name": "Assignment Dashboard",
+      "tagline": "Every assignment across all courses, in one color-coded page.",
+      "description": "Pulls assignments and calendar events from the Canvas learning platform API, builds a filterable, color-coded page with urgency indicators, publishes it to GitHub Pages behind a password, and emails an evening digest.",
+      "runs": "GitHub Actions, every evening",
+      "tech": ["Python", "Canvas REST API", "GitHub Pages", "GitHub Actions", "Gmail SMTP"],
+      "paths": ["all_courses_dashboard.py", ".github/workflows/update-dashboard.yml", "README.md", "config_template.py"]
+    },
+    {
+      "id": "analytics-debugger",
+      "name": "Analytics Debugger",
+      "tagline": "A DevTools panel that makes web-analytics requests readable.",
+      "description": "A Chrome extension that captures analytics upload requests as a page loads and shows them in a readable panel inside the browser's developer tools, so they can be inspected without digging through raw network logs.",
+      "runs": "Runs in the browser while debugging",
+      "tech": ["JavaScript", "Chrome Extension (Manifest V3)", "DevTools API"],
+      "status": "Maintained"
+    },
+    {
+      "id": "writing",
+      "name": "Writing",
+      "tagline": "Notes on building with AI as a non-developer.",
+      "description": "A LinkedIn project entry and a Medium article about going from an idea to a working, automated app with Claude as a coding partner, written from the point of view of a data analyst rather than a software developer.",
+      "runs": "Drafts",
+      "tech": ["Markdown"],
+      "paths": ["writing/"]
+    }
+  ]
+}
