@@ -16,7 +16,7 @@ NEW_HOURS = 30       # emails received within this window count as "new"
 CATCHUP = os.environ.get("SCHOOL_CATCHUP", "").lower() == "true"
 HORIZON_DAYS = 45    # schools announce events weeks ahead, so look well past the next week or two
 MAX_EMAILS = 40
-EMAIL_CHARS = 6000
+EMAIL_CHARS = 15000  # newsletters start with a lot of boilerplate; cutting too early drops later items
 
 MAX_LINKS_PER_EMAIL = 25
 # Links that are never what a family needs (unsubscribe, preferences, social media, 'view in browser')
@@ -53,6 +53,11 @@ def find_school_items(now, rules):
     new_cutoff = now - timedelta(hours=NEW_HOURS)
     # Claude picks links by id ("2:1"); we map the id back to the real address, so it can't invent one
     link_map, listing_parts = {}, []
+    # Sizes only, never content: the Actions log of a public repo is public
+    print("Email sizes (chars, cut off): " + "; ".join(
+        f"#{n} {m['sent']:%b %d}: {len(m['text']):,}" + (f" ({len(m['text']) - EMAIL_CHARS:,} cut)" if len(m['text']) > EMAIL_CHARS else "")
+        for n, m in enumerate(mails)
+    ))
     for n, m in enumerate(mails):
         links = useful_links(m)
         for k, link in enumerate(links):
@@ -148,7 +153,8 @@ if __name__ == "__main__":
         items = find_school_items(now, rules)
     except Exception as e:
         sys.exit(f"School feed failed: {e}")
-    print(f"{len(items)} relevant school items")
+    kinds = {k: sum(1 for i in items if i.get("kind") == k) for k, *_ in SECTIONS}
+    print(f"{len(items)} relevant school items {kinds}")
     if not items:
         print("Nothing relevant today; not sending.")
         sys.exit(0)
