@@ -1,4 +1,7 @@
 # Your own sources for the daily feed: one RSS/Atom feed URL per line.
 # Lines starting with # are ignored. Example:
 # https://www.oneusefulthing.org/feed
-# https://www.lennysnewsletter.com/feed
+https://www.lennysnewsletter.com/feed
+https://stratechery.com/feed/
+https://tldr.tech/api/rss/ai
+https://dataneighbor.substack.com/feed
