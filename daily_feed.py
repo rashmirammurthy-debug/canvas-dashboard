@@ -1,6 +1,7 @@
 """Daily curated feed: pulls RSS feeds and newsletters, has Claude pick and summarize the 5 best,
 adds today's weather and upcoming reminders from your inbox, and emails it all."""
 import email
+import hashlib
 import html
 import imaplib
 import json
@@ -89,17 +90,25 @@ def load_my_sources():
         return [line for line in lines if line]
 
 
+def link_key(link):
+    """Short hash of a link. seen.json stores these, not the links, because links from newsletter
+    emails can carry per-subscriber tracking tokens and this file is committed to the repo."""
+    return hashlib.sha256(link.encode("utf-8")).hexdigest()[:16]
+
+
 def load_seen():
     try:
         with open(SEEN_PATH, encoding="utf-8") as f:
-            return json.load(f)
+            entries = json.load(f)
     except (OSError, ValueError):
         return []
+    # Migrate any raw links from earlier versions to hashes
+    return [link_key(e) if e.startswith("http") else e for e in entries]
 
 
 def save_seen(seen, new_links):
     with open(SEEN_PATH, "w", encoding="utf-8") as f:
-        json.dump((seen + new_links)[-SEEN_LIMIT:], f, indent=0)
+        json.dump((seen + [link_key(l) for l in new_links])[-SEEN_LIMIT:], f, indent=0)
 
 
 def local_now():
@@ -246,7 +255,7 @@ def fetch_items(seen):
                     "body": strip_html(raw)[:BODY_CHARS],
                 })
     items += fetch_newsletters()
-    items = [i for i in items if i["link"] not in seen]
+    items = [i for i in items if link_key(i["link"]) not in seen]
     for n, item in enumerate(items):
         item["id"] = n
     return items
@@ -333,30 +342,47 @@ def add_blurbs(picks):
 
 
 def get_weather():
-    """Today's forecast for WEATHER_CITY via Open-Meteo (free, no API key)."""
-    city = os.environ.get("WEATHER_CITY", "").strip()
-    if not city:
-        return ""
+    """Today's forecast for each place in WEATHER_CITIES via Open-Meteo (free, no API key).
+
+    WEATHER_CITIES is 'City, Region; City, Region', e.g. 'Lexington, Massachusetts; Boston, Massachusetts'.
+    The region narrows the match so 'Lexington' doesn't resolve to Lexington, Kentucky.
+    """
     unit = os.environ.get("WEATHER_UNIT", "fahrenheit")
+    symbol = "F" if unit == "fahrenheit" else "C"
 
     def get(url, **params):
         with urllib.request.urlopen(f"{url}?{urllib.parse.urlencode(params)}", timeout=15) as r:
             return json.load(r)
 
-    place = get("https://geocoding-api.open-meteo.com/v1/search", name=city, count=1)["results"][0]
-    daily = get(
-        "https://api.open-meteo.com/v1/forecast",
-        latitude=place["latitude"], longitude=place["longitude"], timezone="auto", forecast_days=1,
-        temperature_unit=unit,
-        daily="weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max",
-    )["daily"]
-    symbol = "F" if unit == "fahrenheit" else "C"
-    text = WEATHER_CODES.get(daily["weather_code"][0], "Mixed conditions")
-    text += f", high {round(daily['temperature_2m_max'][0])}°{symbol} / low {round(daily['temperature_2m_min'][0])}°{symbol}"
-    rain = daily["precipitation_probability_max"][0]
-    if rain:
-        text += f", {rain}% chance of precipitation"
-    return f"{place['name']}: {text}"
+    lines = []
+    for spec in os.environ.get("WEATHER_CITIES", "").split(";"):
+        name, _, region = (part.strip() for part in spec.partition(","))
+        if not name:
+            continue
+        try:
+            results = get("https://geocoding-api.open-meteo.com/v1/search", name=name, count=100)["results"]
+            place = next(
+                (r for r in results if region.lower() in r.get("admin1", "").lower() and r.get("country_code") == "US"),
+                None,
+            ) if region else results[0]
+            if place is None:
+                raise ValueError(f"no match for '{name}' in '{region}'")
+            daily = get(
+                "https://api.open-meteo.com/v1/forecast",
+                latitude=place["latitude"], longitude=place["longitude"], timezone="auto",
+                forecast_days=1, temperature_unit=unit,
+                daily="weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max",
+            )["daily"]
+        except Exception as e:
+            print(f"Weather for '{name}' failed: {e}", file=sys.stderr)
+            continue
+        text = WEATHER_CODES.get(daily["weather_code"][0], "Mixed conditions")
+        text += f", high {round(daily['temperature_2m_max'][0])}°{symbol} / low {round(daily['temperature_2m_min'][0])}°{symbol}"
+        rain = daily["precipitation_probability_max"][0]
+        if rain:
+            text += f", {rain}% chance of precipitation"
+        lines.append(f"{place['name']}: {text}")
+    return lines
 
 
 def find_reminders(now):
@@ -406,7 +432,7 @@ def render_html(picks, now, weather, reminders):
         f'<div style="color:#888;margin-bottom:{"4px" if weather else "24px"}">{now:%A, %B %d, %Y}</div>'
     ]
     if weather:
-        parts.append(f'<div style="color:#888;margin-bottom:24px">{e(weather)}</div>')
+        parts.append(f'<div style="color:#888;margin-bottom:24px">{"<br>".join(e(w) for w in weather)}</div>')
     if reminders:
         rows = "".join(
             f'<li style="margin:0 0 6px"><b>{e(str(r.get("when", "")))}</b> - {e(str(r.get("what", "")))}'
@@ -455,7 +481,7 @@ if __name__ == "__main__":
     add_blurbs(picks)
     weather = optional("Weather", get_weather)
     reminders = optional("Reminders", find_reminders, now)
-    print(f"Weather: {weather or 'none'}; reminders: {len(reminders or [])}")
+    print(f"Weather: {'; '.join(weather) if weather else 'none'}; reminders: {len(reminders or [])}")
     if not picks and not reminders:
         sys.exit("Nothing to send.")
     body = render_html(picks, now, weather, reminders or [])
