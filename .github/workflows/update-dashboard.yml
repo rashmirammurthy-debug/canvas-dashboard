@@ -2,9 +2,8 @@ name: Update Dashboard
 
 on:
   schedule:
-    # UTC. In summer (EDT) these are 8 AM and 5 PM Eastern; in winter (EST) 7 AM and 4 PM.
-    - cron: '0 12 * * 1-5'
-    - cron: '0 21 * * 1-5'
+    # Once a day, every day, in the evening. UTC: 6 PM Eastern in summer (EDT), 5 PM in winter (EST).
+    - cron: '0 22 * * *'
   workflow_dispatch:           # lets you trigger it manually from GitHub
 
 permissions:
