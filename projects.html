@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Projects</title>
+<meta name="description" content="Things I&#x27;ve built with Claude as a coding partner. This page refreshes itself every week.">
+<meta name="robots" content="noindex, nofollow">
+<style>
+:root {
+  --bg:#f5f6fb; --card:#ffffff; --text:#161a2b; --muted:#5b6478; --border:#e2e5ef;
+  --accent:#1a4fd6; --chip:#eaf0ff; --chip-text:#1a4fd6; --note:#f1f4fb;
+  --active:#137333; --active-bg:#e6f4ea; --quiet:#5b6478; --quiet-bg:#eceef4;
+  --kept:#1a4fd6; --kept-bg:#eaf0ff;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:#0f1220; --card:#181c2e; --text:#e9ecf5; --muted:#9aa3ba; --border:#2a3048;
+    --accent:#7ea2ff; --chip:#1f2745; --chip-text:#a9c0ff; --note:#1d2238;
+    --active:#7fd99a; --active-bg:#183324; --quiet:#a9b0c4; --quiet-bg:#242a40;
+    --kept:#a9c0ff; --kept-bg:#1f2745;
+  }
+}
+* { box-sizing: border-box; }
+body { margin:0; background:var(--bg); color:var(--text); line-height:1.5;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+main { max-width:1080px; margin:0 auto; padding:40px 16px 56px; }
+h1 { font-size:2.1rem; margin:0 0 6px; letter-spacing:-0.02em; }
+.subtitle { color:var(--muted); margin:0 0 32px; font-size:1.05rem; }
+.grid { display:grid; gap:18px; grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr)); }
+.card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:22px;
+  display:flex; flex-direction:column; gap:12px; }
+.card-top { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
+h2 { font-size:1.25rem; margin:0; }
+.pill { font-size:.75rem; font-weight:600; padding:3px 10px; border-radius:999px; white-space:nowrap; }
+.pill.active { color:var(--active); background:var(--active-bg); }
+.pill.quiet { color:var(--quiet); background:var(--quiet-bg); }
+.pill.kept { color:var(--kept); background:var(--kept-bg); }
+.tagline { margin:0; font-weight:600; }
+.desc { margin:0; color:var(--muted); }
+.runs { margin:0; font-size:.9rem; }
+.label { font-size:.7rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
+.chips { display:flex; flex-wrap:wrap; gap:6px; margin:0; padding:0; list-style:none; }
+.chips li { background:var(--chip); color:var(--chip-text); font-size:.78rem; padding:3px 10px; border-radius:999px; }
+.recent { background:var(--note); border-radius:10px; padding:10px 12px; font-size:.92rem; margin-top:auto; }
+.recent p { margin:4px 0 0; }
+.updated { color:var(--muted); font-size:.8rem; margin:0; }
+footer { margin-top:36px; color:var(--muted); font-size:.85rem; }
+</style>
+</head>
+<body>
+<main>
+<h1>Projects</h1>
+<p class="subtitle">Things I&#x27;ve built with Claude as a coding partner. This page refreshes itself every week.</p>
+<div class="grid">
+<section class="card"><div class="card-top"><h2>Daily Reads</h2><span class="pill active">Active</span></div><p class="tagline">A curated daily email of things worth reading.</p><p class="desc">Collects articles from RSS feeds, a personal source list and newsletters in Gmail. Claude picks the best five and writes a short blurb for each. The email also adds the day&#x27;s weather, reminders of upcoming dates found in the inbox, and one-click calendar buttons.</p><p class="runs"><span class="label">Runs</span><br>GitHub Actions, every morning</p><ul class="chips"><li>Python</li><li>Claude API</li><li>RSS</li><li>Gmail IMAP/SMTP</li><li>GitHub Actions</li></ul><div class="recent"><span class="label">Recently</span><p>Improved reliability and speed, added a new school feed with reminders and calendar links, refreshed the design, and fixed broken sources.</p></div><p class="updated">Last updated Sep 19, 2026</p></section>
+<section class="card"><div class="card-top"><h2>School Update</h2><span class="pill active">Active</span></div><p class="tagline">A daily digest of school emails, filtered to what applies.</p><p class="desc">Reads school emails from a Gmail label and has Claude keep only what applies to the family, sorted into things needing action, upcoming dates, and news. Adds links to sign-up forms and video meetings, plus one-click calendar buttons. It only sends when something is relevant.</p><p class="runs"><span class="label">Runs</span><br>GitHub Actions, every morning</p><ul class="chips"><li>Python</li><li>Claude API</li><li>Gmail IMAP/SMTP</li><li>GitHub Actions</li></ul><div class="recent"><span class="label">Recently</span><p>Improved how school emails are read and summarized, extending the lookahead window and adding meeting links and calendar buttons.</p></div><p class="updated">Last updated Sep 19, 2026</p></section>
+<section class="card"><div class="card-top"><h2>Assignment Dashboard</h2><span class="pill active">Active</span></div><p class="tagline">Every assignment across all courses, in one color-coded page.</p><p class="desc">Pulls assignments and calendar events from the Canvas learning platform API, builds a filterable, color-coded page with urgency indicators, publishes it to GitHub Pages behind a password, and emails an evening digest.</p><p class="runs"><span class="label">Runs</span><br>GitHub Actions, every evening</p><ul class="chips"><li>Python</li><li>Canvas REST API</li><li>GitHub Pages</li><li>GitHub Actions</li><li>Gmail SMTP</li></ul><div class="recent"><span class="label">Recently</span><p>Switched the daily update to run automatically each evening and improved handling of login details.</p></div><p class="updated">Last updated Sep 19, 2026</p></section>
+<section class="card"><div class="card-top"><h2>Analytics Debugger</h2><span class="pill kept">Maintained</span></div><p class="tagline">A DevTools panel that makes web-analytics requests readable.</p><p class="desc">A Chrome extension that captures analytics upload requests as a page loads and shows them in a readable panel inside the browser&#x27;s developer tools, so they can be inspected without digging through raw network logs.</p><p class="runs"><span class="label">Runs</span><br>Runs in the browser while debugging</p><ul class="chips"><li>JavaScript</li><li>Chrome Extension (Manifest V3)</li><li>DevTools API</li></ul></section>
+<section class="card"><div class="card-top"><h2>Writing</h2><span class="pill active">Active</span></div><p class="tagline">Notes on building with AI as a non-developer.</p><p class="desc">A LinkedIn project entry and a Medium article about going from an idea to a working, automated app with Claude as a coding partner, written from the point of view of a data analyst rather than a software developer.</p><p class="runs"><span class="label">Runs</span><br>Drafts</p><ul class="chips"><li>Markdown</li></ul><p class="updated">Last updated Sep 05, 2026</p></section>
+</div>
+<footer>Refreshed September 19, 2026 by a scheduled GitHub Actions workflow. The "Recently" notes are written by Claude from recent commit messages.</footer>
+</main>
+</body>
+</html>
